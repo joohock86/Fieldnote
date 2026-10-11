@@ -1,0 +1,9 @@
+data/
+__pycache__/
+*.zip
+.env
+.env.*
+!.env.example
+node_modules/
+.wrangler/
+dist/

@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const ctx={};vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.join(__dirname,'../cloudflare/maintenance.js'),'utf8')+';globalThis.api=maintenance;',ctx);const m=ctx.api;
+const base={id:'contract',first_visit:'2026-01-31',start_date:'2026-01-01',end_date:'2026-12-31',interval_months:3,state:'Active'};
+const dates=c=>Array.from(m.visits(c,[],'2026-01-01'),v=>v.date);
+assert.deepEqual(dates(base),['2026-01-31','2026-04-30','2026-07-31','2026-10-31']);
+assert.deepEqual(dates({...base,interval_months:4}),['2026-01-31','2026-05-31','2026-09-30']);
+assert.deepEqual(dates({...base,interval_months:6}),['2026-01-31','2026-07-31']);
+assert.deepEqual(dates({...base,interval_months:12}),['2026-01-31']);
+assert.deepEqual(dates({...base,first_visit:'2024-02-29',end_date:'2028-02-29',interval_months:12}),['2024-02-29','2025-02-28','2026-02-28','2027-02-28','2028-02-29']);
+assert.deepEqual(dates({...base,end_date:'2026-04-30'}),['2026-01-31','2026-04-30']);
+assert.deepEqual(dates({...base,end_date:'2026-04-29'}),['2026-01-31']);
+let visits=m.visits(base,[{id:'done',maintenance_contract_id:'contract',maintenance_due_date:'2026-01-31',status:'Completed'},{id:'pending',maintenance_contract_id:'contract',maintenance_due_date:'2026-04-30',status:'In progress'}],'2026-04-30');
+assert.deepEqual(Array.from(visits,v=>v.state),['Completed','Due today','Upcoming','Upcoming']);assert.equal(visits[1].report.id,'pending');
+assert.equal(m.visits(base,[],'2026-04-30')[0].state,'Overdue');
+assert(m.visits({...base,state:'Paused'},[],'2026-04-30').every(v=>v.state==='Paused'));
+assert.equal(m.contractState(base,'2027-01-01'),'Expired');assert.equal(m.contractState(base,'2025-12-31'),'Not started');assert.equal(m.contractState({...base,state:'Cancelled'},'2027-01-01'),'Cancelled');
+assert.deepEqual(dates({...base,interval_months:1}),[]);
+console.log('Maintenance schedules passed: all four intervals, month ends, leap years, inclusive contract expiry, linked reports, due states and paused/cancelled contracts.');
