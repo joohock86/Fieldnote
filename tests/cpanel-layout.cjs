@@ -63,6 +63,13 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('.close').click();
       await page.locator('[data-view="maintenance"]').click();
       await check('contracts');
+      assert.equal(await page.locator('#new').innerText(),'+ New Contract');
+      await page.locator('#new').click();
+      assert.equal(await page.locator('#modal-title').innerText(),'New maintenance contract');
+      await page.locator('#contract-form').waitFor();
+      assert.equal(await page.locator('#report-form').count(),0);
+      await check('new-contract-form');
+      await page.locator('.close').click();
       await page.locator('[data-contract]').first().click();
       await check('contract-detail');
       await page.locator('#edit-contract').click();
@@ -70,6 +77,13 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('.close').click();
       await page.getByRole('button',{name:'Scheduled visits',exact:true}).click();
       await check('scheduled-visits');
+      await page.locator('#new').click();
+      await page.locator('#contract-form').waitFor();
+      await page.locator('.close').click();
+      await page.locator('[data-view="reports"]').click();
+      assert.equal(await page.locator('#new').innerText(),'＋ New service report');
+      await page.locator('#new').click();
+      await page.locator('#report-form').waitFor();
       assert.deepEqual(errors,[],`Browser errors at ${width}px`);
       await context.close();
       console.log(`Checked login, reports, customers, contracts, visits and forms at ${width}px`);

@@ -1,4 +1,6 @@
 function prepareMaintenanceNavigation(){
+  $('new').textContent=view==='maintenance'?'+ New Contract':'＋ New service report';
+  $('new').onclick=()=>view==='maintenance'?openContractForm():openForm();
   let tabs=$('customer-tabs');
   if(!tabs){
     const bar=document.createElement('div');bar.id='customer-tabs';bar.className='customer-tabs hidden';
