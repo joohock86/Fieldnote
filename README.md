@@ -39,3 +39,5 @@ python scripts/package.py
 ```
 
 The deploy ZIP is created in `dist/`.
+
+Photos are compressed in the browser before upload or offline saving, with a maximum output edge of 1600 pixels and quality 82%. PNG/WebP transparency is preserved. A smaller original is retained instead of increasing file size. Photo inputs may be up to 30 MB; stored attachments must be under 10 MB. PDFs are unchanged. Existing stored photos are not recompressed. No SQL update is required.

@@ -4,7 +4,7 @@ root=Path(__file__).resolve().parents[1];s=(root/'cloudflare/index.html').read_t
 s=re.sub(r"@import url\('https://fonts.googleapis.com/[^']+'\);",'',s)
 s=s.replace('<title>Fieldnote · Field service workspace</title>','<title>Fieldnote · Offline maintenance preview</title>')
 s=s.replace('<script src="config.js"></script>','').replace('<script src="supabase.js"></script>','<script>'+ (root/'offline-adapter.js').read_text()+'</script>')
-for name in ['maintenance.js','maintenance-ui.js']:
+for name in ['photo-compression.js','maintenance.js','maintenance-ui.js']:
  s=re.sub(r'<script src="'+re.escape(name)+r'"(?: defer)?></script>',lambda m:'<script>'+(root/'cloudflare'/name).read_text()+'</script>',s)
 s=s.replace('class="auth-screen"','class="auth-screen hidden"').replace('id="workspace" class="shell hidden"','id="workspace" class="shell"')
 s=s.replace('<span id="user-name">Service team</span><button id="signout" class="secondary">Sign out</button>','<span id="user-name">Offline preview</span>')
