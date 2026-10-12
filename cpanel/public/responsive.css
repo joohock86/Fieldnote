@@ -1,0 +1,64 @@
+/* Keep wide tables inside their own scroll area and long records inside cards. */
+main, .search, .field, .grid > *, .heading > div, .panel-head > div,
+.profile, .stat, .dialog-head > div { min-width: 0; }
+.grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dialog { max-width: 100%; }
+.detail, .equipment-text, .contract-card h3, .contract-meta,
+#modal-title, #user-name { overflow-wrap: anywhere; }
+.table-wrap { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { min-width: 680px; }
+td { max-width: 260px; overflow-wrap: anywhere; }
+.heading, .panel-head, .profile { gap: 12px; }
+.panel-head { flex-wrap: wrap; }
+.panel-head > div { flex: 1 1 220px; }
+.foot, .actions { flex-wrap: wrap; gap: 10px; }
+
+@media (max-width: 1050px) {
+  header { height: auto; min-height: 83px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; gap: 12px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  aside { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 14px 16px; }
+  aside .brand { grid-column: 1 / -1; margin: 0 0 8px; }
+  .nav { min-height: 48px; margin: 0; padding: 9px 6px; gap: 5px; font-size: 12px; justify-content: center; text-align: center; }
+  .nav span { display: inline; }
+  header { min-height: 54px; padding: 12px 16px; }
+  header > span { flex-basis: 100%; }
+  .profile { width: 100%; }
+  #user-name { flex: 1; }
+  .avatar { flex-shrink: 0; }
+  .heading { flex-direction: column; gap: 16px; }
+  .primary, .secondary, .customer-tabs button, .tools select { min-height: 44px; font-size: 14px; }
+  .stat { padding: 16px; }
+  .stat-top { gap: 6px; }
+  .panel-head { padding: 16px; gap: 10px; }
+  .panel-head > div { flex-basis: 100%; }
+  .tools { gap: 8px; }
+  .tools select { flex: 1 1 130px; max-width: 100%; }
+  .field input, .field select, .field textarea, .search input, .tools select { font-size: 16px; min-height: 44px; }
+  .auth-card > label { min-height: 44px; }
+  .auth-card input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .modal { padding: 10px; }
+  .dialog { max-height: calc(100vh - 20px); max-height: calc(100dvh - 20px); }
+  .dialog-head, .form { padding: 16px; }
+  .close { min-width: 44px; min-height: 44px; flex-shrink: 0; }
+  .actions > button { flex: 1 1 130px; justify-content: center; }
+  .customer-tabs { padding: 16px 16px 0; }
+  .contract-list { padding: 16px; }
+  .contract-card { padding: 14px; }
+  .contract-actions > button { flex: 1 1 130px; justify-content: center; }
+  .maintenance-summary { padding: 0 16px 16px; }
+  .next-service { flex-wrap: wrap; padding: 12px; }
+  .foot { padding: 16px; }
+  .toast { bottom: 16px; left: 16px; right: 16px; overflow-wrap: anywhere; }
+  #modal-body [data-open-visit], #modal-body [data-report] { flex-wrap: wrap; gap: 8px; text-align: left; }
+  #modal-body [data-open-visit] > span, #modal-body [data-report] > span { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 480px) {
+  #new { width: 100%; justify-content: center; }
+  .auth-screen { padding: 16px; }
+  .auth-card { padding: 24px; }
+}
