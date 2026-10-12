@@ -63,6 +63,8 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('.close').click();
       await page.locator('[data-view="maintenance"]').click();
       await check('contracts');
+      assert.equal(await page.locator('#customer-tabs button').count(),2);
+      assert.equal(await page.locator('#new-contract').count(),0);
       assert.equal(await page.locator('#new').innerText(),'+ New Contract');
       await page.locator('#new').click();
       assert.equal(await page.locator('#modal-title').innerText(),'New maintenance contract');

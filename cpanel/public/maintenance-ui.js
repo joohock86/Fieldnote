@@ -4,10 +4,10 @@ function prepareMaintenanceNavigation(){
   let tabs=$('customer-tabs');
   if(!tabs){
     const bar=document.createElement('div');bar.id='customer-tabs';bar.className='customer-tabs hidden';
-    bar.innerHTML='<button data-mode="contracts">Maintenance contracts</button><button data-mode="visits">Scheduled visits</button><button id="new-contract">＋ New contract</button>';
+    bar.innerHTML='<button data-mode="contracts">Maintenance contracts</button><button data-mode="visits">Scheduled visits</button>';
     document.querySelector('.tools').before(bar);
     bar.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{customerMode=button.dataset.mode;render()});
-    $('new-contract').onclick=()=>openContractForm();tabs=bar;
+    tabs=bar;
     const filter=document.createElement('select');filter.id='visit-filter';filter.setAttribute('aria-label','Filter maintenance visits');
     filter.innerHTML=['Outstanding','All visits','Overdue','Due today','Upcoming','Completed','Paused','Cancelled'].map(v=>'<option>'+v+'</option>').join('');
     filter.className='hidden';filter.onchange=render;document.querySelector('.tools').append(filter);
