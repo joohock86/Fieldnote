@@ -7,3 +7,7 @@ __pycache__/
 node_modules/
 .wrangler/
 dist/
+cpanel/private/config.php
+cpanel/public/config-path.php
+cpanel/private/files/
+*supabase-export.json

@@ -43,3 +43,7 @@ The deploy ZIP is created in `dist/`.
 Photos are compressed in the browser before upload or offline saving, with a maximum output edge of 1600 pixels and quality 82%. PNG/WebP transparency is preserved. A smaller original is retained instead of increasing file size. Photo inputs may be up to 30 MB; stored attachments must be under 10 MB. PDFs are unchanged. Existing stored photos are not recompressed. No SQL update is required.
 
 The sign-in form offers Remember me on this device. Checked sessions use browser local storage and refresh automatically when reopening; unchecked sessions use tab storage. Passwords are not saved by the webpage. Signing out clears both stored sessions. Clearing browser data, private browsing or revoked Supabase sessions may require signing in again. Temporary connection failures retain the remembered session for retry.
+
+## Own cPanel hosting
+
+The PHP/MySQL migration version is in `cpanel/`. See `cpanel/README.md` for staging, exporting Supabase records/files, creating new logins and verifying the import before cutover. The original Supabase source remains available in `cloudflare/`.
