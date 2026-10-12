@@ -7,10 +7,22 @@ const fieldnote = (() => {
   let session = null, refreshJob = null;
   const photoUrls = new Map();
   const storageKey = 'fieldnote-session:' + url;
-  try { session = JSON.parse(sessionStorage.getItem(storageKey) || 'null'); } catch {}
+  let persistent = false, sessionNotice = '';
+  function readSession(storage) {
+    try { const value=JSON.parse(storage.getItem(storageKey)||'null'); return value?.access_token && value?.refresh_token && value?.user?.id ? value : null; } catch {return null;}
+  }
+  try {session=readSession(sessionStorage);} catch {}
+  if(!session){try{session=readSession(localStorage);persistent=Boolean(session);}catch{}}
+  function removeStored(storage){try{storage.removeItem(storageKey);}catch{}}
   function remember(value) {
     session = value;
-    try { value ? sessionStorage.setItem(storageKey, JSON.stringify(value)) : sessionStorage.removeItem(storageKey); } catch {}
+    if(!value){try{removeStored(sessionStorage);}catch{}try{removeStored(localStorage);}catch{}persistent=false;return;}
+    if(persistent){
+      try{localStorage.setItem(storageKey,JSON.stringify(value));try{removeStored(sessionStorage);}catch{}return;}
+      catch{persistent=false;sessionNotice='This browser could not remember your device. Your login is available for this session only.';}
+    }
+    try{sessionStorage.setItem(storageKey,JSON.stringify(value));}catch{}
+    try{removeStored(localStorage);}catch{}
   }
   async function send(path, options = {}, token = null) {
     if (!configured) throw Error('Website setup is not complete. Add the project URL and publishable key to config.js.');
@@ -32,7 +44,7 @@ const fieldnote = (() => {
     if (!refreshJob) refreshJob = send('/auth/v1/token?grant_type=refresh_token', {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({refresh_token: session.refresh_token})
     }).then(data => { remember({...data, expires_at: Math.floor(Date.now()/1000) + data.expires_in}); })
-      .catch(error => { remember(null); throw error; }).finally(() => {refreshJob = null;});
+      .catch(error => { if([400,401,403].includes(error.status))remember(null); throw error; }).finally(() => {refreshJob = null;});
     await refreshJob;
   }
   async function authorized(path, options = {}) {
@@ -47,12 +59,13 @@ const fieldnote = (() => {
   }
   async function member() {
     const users = await authorized('/rest/v1/fieldnote_members?select=user_id');
-    if (!users?.length) throw Error('This login has not been added to the Fieldnote team. Ask your administrator to grant access.');
+    if (!users?.length) {const error=Error('This login has not been added to the Fieldnote team. Ask your administrator to grant access.');error.status=403;throw error;}
   }
-  async function signIn(email, password) {
+  async function signIn(email, password, rememberDevice = false) {
     const data = await send('/auth/v1/token?grant_type=password', {
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, password})
     });
+    persistent=Boolean(rememberDevice);sessionNotice='';
     remember({...data, expires_at: Math.floor(Date.now()/1000) + data.expires_in});
     try { await member(); } catch (error) {remember(null); throw error;}
     return session.user;
@@ -136,5 +149,5 @@ const fieldnote = (() => {
     }
     throw Error('Unknown request.');
   }
-  return {configured, signIn, signOut, member, request, photoUrl, displayPhoto, get user(){return session?.user || null;}};
+  return {configured, signIn, signOut, member, request, photoUrl, displayPhoto, get sessionNotice(){return sessionNotice;}, get user(){return session?.user || null;}};
 })();
