@@ -2,13 +2,23 @@
 
 Field service reports, customer history, maintenance contracts, and private photo/PDF attachments.
 
-## Website
+## Live website
 
-The Cloudflare upload files are in `cloudflare/`. Deploy every file in this directory together to the existing Cloudflare Worker. `config.js` contains the browser-safe Supabase URL and publishable key; never use a secret or service_role key there.
+Fieldnote is live at https://fieldnote.valsystech.com.sg/ on cPanel PHP 8.4 and MySQL. Use `cpanel/public/` as the production webpage source. The owner uploads updates with cPanel File Manager into `/home/valsyste/fieldnote.valsystech.com.sg`. GitHub synchronization and live deployment are separate actions.
+
+Private configuration and attachments live in `/home/valsyste/fieldnote-private`. Never commit passwords, private configuration, backups, runtime records, customer uploads, or generated ZIPs.
+
+The interface uses a blue theme and responsive layouts. Customers can be added before their first service visit and edited through **Customers → select a customer → Edit customer**. Customer profile forms do not show name suggestions; service report and contract forms do. Cancel closes new and editing forms without saving.
+
+See [cpanel/README.md](cpanel/README.md) for hosting and historical migration details, [customer management](cpanel/CUSTOMERS-UPDATE.md) for upload files and live verification, [customer suggestions](cpanel/CUSTOMER-SUGGESTIONS.md), and [blue theme/mobile layout](cpanel/BLUE-THEME-UPDATE.md).
+
+## Legacy sources and offline preview
+
+`cloudflare/` and `supabase/` are retained legacy sources from before the completed cPanel migration. They are not the current deployment target. The legacy `config.js` contains a browser-safe Supabase URL and publishable key; never use a secret or service_role key there.
 
 The offline preview is `fieldnote-maintenance-offline.html`. Open it in a browser to test without internet. Test data stays in that browser and does not change hosted records.
 
-## Supabase
+### Legacy Supabase setup
 
 For a new project, run `supabase/setup.sql`, then `maintenance.sql`, then `pdf-attachments.sql`. For the existing project, run only scripts that have not already been applied. Create website users and grant membership using a privately filled copy of `add-team.example.sql`.
 
@@ -16,7 +26,22 @@ Contracts support 3, 4, 6 or 12 month intervals, covered equipment, and contract
 
 ## Verify
 
-No packages are required for these checks:
+Production checks include:
+
+```sh
+node tests/cpanel-adapter.cjs
+node tests/customer-directory.cjs
+node tests/customer-suggestions.cjs
+php -l cpanel/public/api.php
+php -l cpanel/public/customer-records.php
+php tests/customer-records.php
+```
+
+Run `node tests/cpanel-layout.cjs` with Playwright on `NODE_PATH` and Microsoft Edge installed, or set `FIELDNOTE_BROWSER` to a compatible Chromium executable. It uses synthetic records, covers layouts from 320–1440px and customer/report/contract workflows, and does not contact production. Screenshots are generated under ignored `dist/layout-check/`.
+
+The PHP customer storage test uses an isolated storage boundary, not production MySQL. Live browser verification is documented separately in [CUSTOMERS-UPDATE.md](cpanel/CUSTOMERS-UPDATE.md).
+
+Legacy/offline checks require no packages:
 
 ```sh
 node tests/maintenance.cjs
@@ -25,25 +50,21 @@ node tests/offline.cjs
 node tests/pdf-and-highlights.cjs
 ```
 
-API checks use mocks; SQL migrations and live browser behavior require testing against the actual project.
+API checks use mocks; they do not establish deployment or live database correctness.
 
 ## Change workflow
 
-The owner requests that every completed webpage change be committed and pushed to the selected GitHub repository. Future updates should include source, SQL additions when needed, and relevant checks. Never include browser test data, local database files, uploaded customer documents, passwords or secret API keys. GitHub synchronization does not deploy to Cloudflare unless separately configured.
+Commit and push every completed change to https://github.com/joohock86/Fieldnote, together with relevant Markdown updates and checks. Inspect the diff before committing. Record live verification after the owner uploads the update; never claim deployment from a GitHub push alone. Never include browser test data, local database files, uploaded customer documents, passwords or secret API keys.
 
-## Create upload files
+## Legacy/offline packaging
 
 ```sh
 python scripts/build-offline.py
 python scripts/package.py
 ```
 
-The deploy ZIP is created in `dist/`.
+These scripts create legacy/offline artifacts in `dist/`. Current cPanel updates should be packaged from the changed files in `cpanel/public/`, placed at the archive root, and uploaded according to the relevant cPanel update document.
 
 Photos are compressed in the browser before upload or offline saving, with a maximum output edge of 1600 pixels and quality 82%. PNG/WebP transparency is preserved. A smaller original is retained instead of increasing file size. Photo inputs may be up to 30 MB; stored attachments must be under 10 MB. PDFs are unchanged. Existing stored photos are not recompressed. No SQL update is required.
 
-The sign-in form offers Remember me on this device. Checked sessions use browser local storage and refresh automatically when reopening; unchecked sessions use tab storage. Passwords are not saved by the webpage. Signing out clears both stored sessions. Clearing browser data, private browsing or revoked Supabase sessions may require signing in again. Temporary connection failures retain the remembered session for retry.
-
-## Own cPanel hosting
-
-The PHP/MySQL migration version is in `cpanel/`. See `cpanel/README.md` for staging, exporting Supabase records/files, creating new logins and verifying the import before cutover. The original Supabase source remains available in `cloudflare/`.
+The production sign-in form offers Remember me on this device. PHP uses an HttpOnly, Secure, SameSite=Lax cookie. Remembered logins last up to 90 days; ordinary sessions use a browser-session cookie with a 24-hour server expiry. Passwords are not saved in browser storage. See the cPanel README for hosting maintenance and authentication details.

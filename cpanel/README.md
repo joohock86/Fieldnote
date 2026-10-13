@@ -1,10 +1,18 @@
-# cPanel migration (PHP 8.4 + MySQL/MariaDB)
+# cPanel production (PHP 8.4 + MySQL/MariaDB)
 
-This separate version is prepared for https://fieldnote.valsystech.com.sg/. It has not been deployed or tested against the actual hosting/database. Keep the Supabase site and data intact until migration and manual checks pass.
+Fieldnote is live at https://fieldnote.valsystech.com.sg/ using cPanel PHP 8.4 and MySQL. Production source is in `public/`. The website root is `/home/valsyste/fieldnote.valsystech.com.sg`; private configuration and attachments are in `/home/valsyste/fieldnote-private`. The database and database username are `valsyste_fieldnote`. Never put passwords, private configuration, backups, or customer uploads in GitHub.
 
-Requirements: PHP 8.4 with PDO MySQL and fileinfo, MySQL 5.7+ or a compatible MariaDB with JSON support, HTTPS, and a writable private folder. PHP was not installed in the development workspace, so PHP runtime/database tests are still required on a staging installation.
+The owner handoff confirms the Supabase migration was completed and tested with 5 contracts, 13 reports, and 10 stored attachment files, including 9 referenced attachments. These are migration baseline counts, not current live totals. `cloudflare/` and `supabase/` are legacy sources.
 
-## Stage the migration
+The owner deploys updates through cPanel File Manager. GitHub commits and pushes do not deploy the live website. See [BLUE-THEME-UPDATE.md](BLUE-THEME-UPDATE.md), [CUSTOMERS-UPDATE.md](CUSTOMERS-UPDATE.md), and [CUSTOMER-SUGGESTIONS.md](CUSTOMER-SUGGESTIONS.md) for interface changes and upload instructions. Use the latest public source or a freshly prepared update package.
+
+Requirements: PHP 8.4 with PDO MySQL and fileinfo, MySQL 5.7+ or a compatible MariaDB with JSON support, HTTPS, and a writable private folder. Local PHP 8.4 syntax and isolated storage checks are available; local tests do not connect to production MySQL.
+
+Authenticated live checks on 13 October 2026 verified the customer forms, all six new/editing Cancel buttons, and the customer suggestion behavior. See [CUSTOMERS-UPDATE.md](CUSTOMERS-UPDATE.md) for the precise scope and limits of that verification.
+
+## Historical migration procedure
+
+The steps below describe the completed migration and a potential future staging migration. Do not rerun setup or imports on the current live installation as part of a normal webpage update.
 
 1. Back up your existing cPanel website folder. In cPanel MySQL Databases, create a new database and dedicated database user, then grant that user privileges to that database. Import `schema.sql` through phpMyAdmin. Do not import it into an unrelated application's database.
 2. In File Manager, create `/home/valsyste/fieldnote-private/` outside `public_html` and outside the subdomain document root. Copy `private/config.example.php` into it as `config.php`. Fill in the full cPanel-prefixed database name, database username and database password privately. Use a unique random setup key of at least 32 characters. Never send these secrets through chat or commit them to GitHub.

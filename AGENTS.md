@@ -10,4 +10,6 @@ Owner handoff: migration from Supabase was completed and tested with 5 contracts
 
 Commit and push every completed change to https://github.com/joohock86/Fieldnote. Run relevant checks and inspect the diff before committing. Never commit private configuration, backups, customer uploads, or passwords.
 
+Keep the relevant Markdown documentation updated with each completed change and push it to GitHub with the source. Record the resulting behavior, relevant checks, and live verification status. Distinguish local testing, GitHub synchronization, and verified cPanel deployment; update the documentation again when live verification is completed.
+
 Never commit runtime records, customer uploads, passwords, secret keys, local .env files, or generated ZIPs. Supabase publishable keys are browser-safe. Use example emails for team membership scripts.
