@@ -111,6 +111,8 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('#new').click();
       await page.locator('#customer-form').waitFor();
       assert.equal(await page.locator('#report-form').count(),0);
+      await page.locator('#f-customer').fill('Example');
+      assert.equal(await page.getByRole('listbox',{name:'Existing customers'}).count(),0,'Customer profile forms must not offer customer selection');
       await check('new-customer-form');
       await page.getByRole('button',{name:'Cancel',exact:true}).click();
       assert.equal(await page.locator('#modal').isVisible(),false,'Cancel must close the new customer form');
@@ -184,6 +186,8 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('[data-customer-index]').filter({hasText:report.customer}).click();
       await page.locator('#edit-customer').click();
       await check('edit-customer-form');
+      assert.equal(await page.getByRole('listbox',{name:'Existing customers'}).count(),0,'Editing a customer must not display suggestions on focus');
+      assert.equal(await page.locator('#f-customer').inputValue(),report.customer,'Existing customer name must remain editable');
       await page.locator('#f-customer').fill('Renamed facilities customer');
       await page.locator('#save-customer').click();
       await page.locator('#edit-customer').waitFor();
