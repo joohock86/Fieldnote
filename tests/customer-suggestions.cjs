@@ -1,0 +1,18 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const context = {};
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('cpanel/public/customer-suggestions.js', 'utf8') + ';globalThis.match = customerSuggestions.matches;', context);
+const match = (query, names) => Array.from(context.match(query, names));
+assert.deepEqual(match('', ['Example']), []);
+assert.deepEqual(match('  ', ['Example']), []);
+assert.deepEqual(match('ACME', ['Acme Facilities', ' acme facilities ', 'Other Company', null]), ['Acme Facilities']);
+assert.deepEqual(match('acme facilities', ['Acme  Facilities']), ['Acme  Facilities']);
+assert.deepEqual(match('fac', ['Example Facilities', 'Facility Services']), ['Facility Services', 'Example Facilities']);
+assert.deepEqual(match('fac example', ['Example Facilities', 'Facility Services']), ['Example Facilities']);
+assert.deepEqual(match('cafe', ['Café Systems']), ['Café Systems']);
+assert.deepEqual(match('new customer', ['Example Company']), []);
+assert.equal(match('company', Array.from({length:20}, (_, i) => 'Company ' + i)).length, 8);
+assert.deepEqual(match('chem', ['Example Chemistry Ltd']), ['Example Chemistry Ltd']);
+console.log('Customer name matching passed: partial names, ranking, case/spacing deduplication, accents, contract-only names, and new names.');

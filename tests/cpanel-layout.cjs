@@ -14,20 +14,22 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
   const failures = [];
   try {
     for (const width of [320,375,390,430,768,1024,1440]) {
-      const context = await browser.newContext({viewport:{width,height:900}});
+      const context = await browser.newContext({viewport:{width,height:900},hasTouch:width<=430});
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
       let authenticated = false;
+      let recordWrites = 0;
       await page.route('**/*', async route => {
         const url = new URL(route.request().url());
         if (url.hostname !== 'fieldnote.test') return route.abort();
         if (url.pathname === '/api.php') {
           const action = url.searchParams.get('action');
+          if (['reports','contracts'].includes(action) && route.request().method() === 'POST') recordWrites++;
           if (action === 'me' && !authenticated) return route.fulfill({status:401,json:{error:'Sign in required'}});
           if (action === 'login') { authenticated=true; return route.fulfill({json:{email:'long-team-address@example.com',id:'demo-user'}}); }
           if (action === 'reports') return route.fulfill({json:[report]});
-          if (action === 'contracts') return route.fulfill({json:[contract]});
+          if (action === 'contracts') return route.fulfill({json:[contract,{...contract,id:'contract-only',customer:'Example Chemical Services'}]});
           throw new Error('Unexpected API action: '+action);
         }
         const name = url.pathname === '/' ? 'index.html' : path.basename(url.pathname);
@@ -43,6 +45,32 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
         if(width<=720 && result.inputSizes.some(size=>size<16)) failures.push({width,name,issue:'Input text below 16px can trigger iPhone zoom'});
         if([375,1440].includes(width)) await page.screenshot({path:path.join(output,`${width}-${name}.png`),fullPage:!result.dialog.length});
       }
+      async function checkCustomerSuggestions() {
+        const input = page.locator('#f-customer');
+        await input.fill('eXaMpLe');
+        assert.deepEqual(await page.getByRole('listbox',{name:'Existing customers'}).getByRole('option').allTextContents(),['Example Chemical Services',report.customer]);
+        await check('customer-suggestions');
+        await input.fill('FAC');
+        const option = page.getByRole('listbox',{name:'Existing customers'}).getByRole('option',{name:report.customer,exact:true});
+        if(width<=430) await option.tap(); else await option.click();
+        assert.equal(await input.inputValue(),report.customer);
+        assert.equal(await input.getAttribute('aria-expanded'),'false');
+        assert.equal(await page.locator('#f-phone').inputValue(),'');
+        await input.fill('chem');
+        await input.press('ArrowDown');
+        assert.ok(await input.getAttribute('aria-activedescendant'));
+        await input.press('Enter');
+        assert.equal(await input.inputValue(),'Example Chemical Services');
+        assert.equal(await input.getAttribute('aria-expanded'),'false');
+        await input.fill('Example');
+        await input.press('Escape');
+        assert.equal(await input.getAttribute('aria-expanded'),'false');
+        assert.equal(await page.locator('#modal').isVisible(),true);
+        await input.fill('Brand new customer');
+        assert.equal(await input.getAttribute('aria-expanded'),'false');
+        await input.press('Tab');
+        assert.equal(await input.inputValue(),'Brand new customer');
+      }
       await page.goto('http://fieldnote.test/');
       await check('login');
       await page.locator('#login-email').fill('test@example.com');
@@ -55,10 +83,11 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('.close').click();
       await page.locator('#new').click();
       await check('report-form');
+      await checkCustomerSuggestions();
       await page.locator('.close').click();
       await page.locator('[data-view="customers"]').click();
       await check('customers');
-      await page.locator('[data-customer-index]').click();
+      await page.locator('[data-customer-index="0"]').click();
       await check('customer-detail');
       await page.locator('.close').click();
       await page.locator('[data-view="maintenance"]').click();
@@ -71,6 +100,7 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('#contract-form').waitFor();
       assert.equal(await page.locator('#report-form').count(),0);
       await check('new-contract-form');
+      await checkCustomerSuggestions();
       await page.locator('.close').click();
       await page.locator('[data-contract]').first().click();
       await check('contract-detail');
@@ -86,6 +116,7 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       assert.equal(await page.locator('#new').innerText(),'＋ New service report');
       await page.locator('#new').click();
       await page.locator('#report-form').waitFor();
+      assert.equal(recordWrites,0,'Selecting a suggestion must not save a report or contract');
       assert.deepEqual(errors,[],`Browser errors at ${width}px`);
       await context.close();
       console.log(`Checked login, reports, customers, contracts, visits and forms at ${width}px`);

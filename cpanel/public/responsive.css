@@ -13,6 +13,12 @@ td { max-width: 260px; overflow-wrap: anywhere; }
 .panel-head > div { flex: 1 1 220px; }
 .foot, .actions { flex-wrap: wrap; gap: 10px; }
 
+.customer-suggestion-field { position: relative; }
+.customer-suggestion-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 30; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 240px; overflow-y: auto; background: #fff; border: 1px solid #b8cef7; border-radius: 8px; box-shadow: 0 8px 24px #10284c26; }
+.customer-suggestion-list[hidden] { display: none; }
+.customer-suggestion-list li { padding: 12px; min-height: 44px; display: flex; align-items: center; border-radius: 5px; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.customer-suggestion-list li:hover, .customer-suggestion-list li[aria-selected="true"] { background: #eaf2ff; color: var(--blue); }
+
 @media (max-width: 1050px) {
   header { height: auto; min-height: 83px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; gap: 12px; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
