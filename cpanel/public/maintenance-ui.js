@@ -1,6 +1,7 @@
 function prepareMaintenanceNavigation(){
-  $('new').textContent=view==='maintenance'?'+ New Contract':'＋ New service report';
-  $('new').onclick=()=>view==='maintenance'?openContractForm():openForm();
+  $('new').textContent=view==='maintenance'?'+ New Contract':view==='customers'?'+ New Customer':'＋ New service report';
+  $('new').onclick=()=>view==='maintenance'?openContractForm():view==='customers'?openCustomerForm():openForm();
+  $('new').disabled=view==='customers'&&!!customersError;
   let tabs=$('customer-tabs');
   if(!tabs){
     const bar=document.createElement('div');bar.id='customer-tabs';bar.className='customer-tabs hidden';
@@ -17,7 +18,7 @@ function prepareMaintenanceNavigation(){
   $('status').classList.toggle('hidden',view!=='reports');$('type').classList.toggle('hidden',view!=='reports');
   $('visit-filter').classList.toggle('hidden',view!=='maintenance'||customerMode!=='visits');
   $('export').classList.toggle('hidden',view!=='reports');
-  $('search').placeholder=view!=='reports'?'Search customer, contract, system or equipment…':'Search customer, equipment, serial number or technician…';
+  $('search').placeholder=view==='customers'?'Search customer name or contact details…':view==='maintenance'?'Search customer, contract, system or equipment…':'Search customer, equipment, serial number or technician…';
 }
 function maintenanceBadge(state){return '<span class="badge '+(state==='Overdue'?'overdue':state==='Due today'?'progress':['Expired','Paused','Cancelled','Not started'].includes(state)?'neutral':'')+'">'+esc(state)+'</span>';}
 function contractMatches(c){const q=$('search').value.trim().toLowerCase();return [c.customer,c.name,c.equipment,c.serial,c.phone,c.email,c.location].join(' ').toLowerCase().includes(q);}
@@ -68,23 +69,6 @@ function renderCustomerWorkspace(){
   const rows=visits.filter(v=>selection==='All visits'||(selection==='Outstanding'?['Overdue','Due today','Upcoming'].includes(v.state):v.state===selection));
   $('content').innerHTML='<div class="maintenance-summary"><span><b>'+visits.filter(v=>v.state==='Overdue').length+'</b> overdue</span><span><b>'+visits.filter(v=>v.state==='Due today').length+'</b> due today</span><span><b>'+visits.filter(v=>v.state==='Upcoming').length+'</b> upcoming</span><span><b>'+visits.filter(v=>v.state==='Completed').length+'</b> completed</span></div>'+visitsTable(rows);
   $('count').textContent=rows.length+' scheduled visits';bindVisitActions($('content'));
-}
-function renderCustomerRecords(){
-  const q=$('search').value.trim().toLowerCase(), groups=new Map();
-  for(const r of [...reports,...contracts]){const key=r.customer.trim().toLowerCase();if(!groups.has(key))groups.set(key,{customer:r.customer,rows:[],contracts:[]});}
-  for(const r of reports)groups.get(r.customer.trim().toLowerCase()).rows.push(r);
-  for(const c of contracts)groups.get(c.customer.trim().toLowerCase()).contracts.push(c);
-  const rows=[...groups.values()].filter(g=>[g.customer,...g.rows.flatMap(r=>[r.phone,r.email,r.equipment,r.location]),...g.contracts.flatMap(c=>[c.name,c.phone,c.email,c.equipment,c.location])].join(' ').toLowerCase().includes(q));
-  $('list-title').textContent='All customers';$('list-subtitle').textContent='Service history and maintenance contracts for each customer.';
-  $('content').innerHTML=rows.length?'<div class="table-wrap"><table><thead><tr><th>Customer</th><th>Contact number</th><th>Email</th><th>Reports</th><th>Contracts</th></tr></thead><tbody>'+rows.map((g,i)=>{const records=[...g.rows,...g.contracts];return '<tr class="row" tabindex="0" data-customer-index="'+i+'"><td><strong>'+esc(g.customer)+'</strong><small>'+esc(records.find(r=>r.location)?.location||'')+'</small></td><td>'+esc(records.find(r=>r.phone)?.phone||'—')+'</td><td>'+esc(records.find(r=>r.email)?.email||'—')+'</td><td>'+g.rows.length+'</td><td>'+g.contracts.length+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty"><h2>No customers found</h2><p>Add a service report or maintenance contract to create a customer record.</p></div>';
-  $('count').textContent=rows.length+' customers';
-  $('content').querySelectorAll('[data-customer-index]').forEach(el=>{const action=()=>customerDetail(rows[Number(el.dataset.customerIndex)]);el.onclick=action;el.onkeydown=e=>{if(e.key==='Enter')action()}});
-}
-function customerDetail(g){
-  $('modal-title').textContent=g.customer+' · Customer';
-  $('modal-body').innerHTML='<div class="form"><div class="section">Maintenance contracts</div>'+(g.contracts.length?g.contracts.map(contractCard).join(''):'<p>No maintenance contracts yet.</p>')+'<button class="secondary" id="customer-add-contract">＋ New maintenance contract</button><div class="section">Service history</div>'+(g.rows.length?g.rows.map(r=>'<button class="secondary" style="display:flex;width:100%;justify-content:space-between;margin-bottom:12px" data-open-visit="'+esc(r.id)+'"><span>'+esc(pretty(r.date))+' · '+esc(r.action)+'<br><small>'+esc(r.equipment)+' · '+esc(r.technician)+'</small></span>'+badge(r.status)+'</button>').join(''):'<p>No service reports yet.</p>')+'</div>';
-  $('customer-add-contract').onclick=()=>{const r=g.rows[0]||g.contracts[0]||{};openContractForm({customer:g.customer,phone:r.phone,email:r.email,location:r.location})};
-  bindContractActions($('modal-body'));bindVisitActions($('modal-body'));show();
 }
 function contractDetail(c){
   if(!c)return;$('modal-title').textContent=c.name+' · Contract';

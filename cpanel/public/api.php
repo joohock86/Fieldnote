@@ -11,6 +11,7 @@ function validDate(mixed $date): bool {if(!is_string($date))return false;$d=Date
 function input(): array {try {$v=json_decode(file_get_contents('php://input'),true,64,JSON_THROW_ON_ERROR);}catch(Throwable $e){fail('Invalid JSON.');}if(!is_array($v))fail('Invalid request.');return $v;}
 function record(string $kind,string $id,bool $lock=false): ?array {$row=query('SELECT document FROM fn_records WHERE kind=? AND id=?'.($lock?' FOR UPDATE':''),[$kind,$id])->fetchColumn();return $row===false?null:json_decode($row,true,64,JSON_THROW_ON_ERROR);}
 function records(string $kind): array {return array_map(fn($r)=>json_decode($r,true,64,JSON_THROW_ON_ERROR),query('SELECT document FROM fn_records WHERE kind=?',[$kind])->fetchAll(PDO::FETCH_COLUMN));}
+require_once __DIR__.'/customer-records.php';
 function attachmentPath(mixed $p): string {global $cfg;if(!is_string($p)||preg_match('/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/D',$p)!==1)fail('Invalid attachment reference.');return rtrim($cfg['files'],'/').'/'.$p;}
 function onSchedule(array $c,string $date): bool {
  if(!validDate($date)||$date<$c['first_visit']||$date>$c['end_date'])return false;
@@ -44,6 +45,7 @@ function saveRecord(string $kind,array $v,bool $import=false): array {
  if($old&&(($old['maintenance_contract_id']??null)!==$cid||($old['maintenance_due_date']??null)!==$due))fail('Saved reports cannot be reassigned.');
  if($cid!==null){if(!validId($cid)||!validDate($due))fail('Invalid visit reference.');$c=record('contract',$cid,true);if(!$c||$v['action']!=='Maintenance'||!onSchedule($c,$due))fail('Report must match a scheduled maintenance visit.');query('INSERT INTO fn_visit_slots(contract_id,due_date,report_id) VALUES(?,?,?) ON DUPLICATE KEY UPDATE report_id=report_id',[$cid,$due,$id]);$slot=query('SELECT report_id FROM fn_visit_slots WHERE contract_id=? AND due_date=?',[$cid,$due])->fetchColumn();if($slot!==$id)fail('A report already exists for this visit.');}
  }
+ $profile=customerForName($v['customer']);if($profile)$v['customer_id']=$profile['id'];
  $v['id']=$id;$v['created_at']=$old['created_at']??($import?($v['created_at']??gmdate('c')):gmdate('c'));$v['created_by']=$old['created_by']??($import?($v['created_by']??null):$user['id']);$v['updated_at']=$import?($v['updated_at']??gmdate('c')):gmdate('c');$v['updated_by']=$import?($v['updated_by']??null):$user['id'];
  query('INSERT INTO fn_records(kind,id,document) VALUES(?,?,?) ON DUPLICATE KEY UPDATE document=VALUES(document)',[$kind,$id,json_encode($v,JSON_THROW_ON_ERROR)]);$db->commit();return $v;
  }catch(Throwable $e){if($db->inTransaction())$db->rollBack();throw $e;}
@@ -78,6 +80,7 @@ try{
  if(!$user)fail('Please sign in.',401);
  if($action==='me')respond(200,['id'=>$user['id'],'email'=>$user['email'],'is_admin'=>(bool)$user['is_admin']]);
  if($action==='logout'&&$method==='POST'){query('DELETE FROM fn_sessions WHERE token_hash=?',[hash('sha256',$token)]);setcookie('fieldnote_session','',['expires'=>1,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);respond(200,['ok'=>true]);}
+ if($action==='customers'){if($method==='GET')respond(200,records('customer'));if($method==='POST')respond(201,saveCustomer(input()));}
  if(in_array($action,['reports','contracts'],true)){$kind=$action==='reports'?'report':'contract';if($method==='GET')respond(200,records($kind));if($method==='POST')respond(201,saveRecord($kind,input()));}
  if($action==='import-record'&&$method==='POST'){if(!$user['is_admin'])fail('Administrator only.',403);$v=input();if(!in_array($v['kind']??'',['contract','report'],true))fail('Invalid import type.');respond(201,saveRecord($v['kind'],$v['record'],true));}
  if(in_array($action,['upload','import-file'],true)&&$method==='POST'){
@@ -94,4 +97,4 @@ try{
  if($action==='file'&&$method==='GET'){$file=attachmentPath($_GET['path']??'');if(!is_file($file))fail('File not found.',404);$ext=pathinfo($file,PATHINFO_EXTENSION);header('Content-Type: '.['jpg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','pdf'=>'application/pdf'][$ext]);header('Content-Disposition: inline; filename="'.basename($file).'"');readfile($file);exit;}
  if($action==='verify'&&$method==='GET'){if(!$user['is_admin'])fail('Administrator only.',403);$reports=records('report');$contracts=records('contract');$refs=[];foreach($reports as $r)foreach($r['photos']??[]as $p)$refs[$p]=true;$missing=[];foreach(array_keys($refs)as $p)if(!is_file(attachmentPath($p)))$missing[]=$p;respond(200,['reports'=>count($reports),'contracts'=>count($contracts),'attachments'=>count($refs),'missing'=>$missing,'stored_files'=>is_dir($cfg['files'])?iterator_count(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cfg['files'],FilesystemIterator::SKIP_DOTS))):0]);}
  fail('Not found.',404);
-}catch(PDOException $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('Fieldnote database error: '.$e->getCode());fail('Database operation failed. Check configuration and schema, or conflicting visit records.',500);}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('Fieldnote server error: '.$e->getMessage());fail('Server operation failed. Check the hosting error log.',500);}
+}catch(CustomerRequestError $e){fail($e->getMessage(),$e->getCode());}catch(PDOException $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('Fieldnote database error: '.$e->getCode());fail('Database operation failed. Check configuration and schema, or conflicting visit records.',500);}catch(Throwable $e){if(isset($db)&&$db->inTransaction())$db->rollBack();error_log('Fieldnote server error: '.$e->getMessage());fail('Server operation failed. Check the hosting error log.',500);}

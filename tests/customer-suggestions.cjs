@@ -12,6 +12,7 @@ assert.deepEqual(match('acme facilities', ['Acme  Facilities']), ['Acme  Facilit
 assert.deepEqual(match('fac', ['Example Facilities', 'Facility Services']), ['Facility Services', 'Example Facilities']);
 assert.deepEqual(match('fac example', ['Example Facilities', 'Facility Services']), ['Example Facilities']);
 assert.deepEqual(match('cafe', ['Café Systems']), ['Café Systems']);
+assert.equal(match('cafe', ['Cafe Systems','Café Systems']).length,2);
 assert.deepEqual(match('new customer', ['Example Company']), []);
 assert.equal(match('company', Array.from({length:20}, (_, i) => 'Company ' + i)).length, 8);
 assert.deepEqual(match('chem', ['Example Chemistry Ltd']), ['Example Chemistry Ltd']);

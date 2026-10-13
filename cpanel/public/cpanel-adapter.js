@@ -12,10 +12,10 @@ const fieldnote=(()=>{
  function displayPhoto(path){return 'api.php?action=file&path='+encodeURIComponent(path);}
  async function request(path,options){
   if(path==='/api/photos')return call('upload',{method:'POST',headers:{'Content-Type':options.body.type||'application/pdf'},body:options.body});
-  const action=path==='/api/reports'?'reports':path==='/api/contracts'?'contracts':null;
+  const action=path==='/api/reports'?'reports':path==='/api/contracts'?'contracts':path==='/api/customers'?'customers':null;
   if(!action)throw Error('Unknown request.');
   if(options)return call(action,{method:'POST',headers:{'Content-Type':'application/json'},body:options.body});
-  const data=await call(action);return data.sort((a,b)=>action==='reports'?b.date.localeCompare(a.date):a.end_date.localeCompare(b.end_date));
+  const data=await call(action);return data.sort((a,b)=>action==='reports'?b.date.localeCompare(a.date):action==='contracts'?a.end_date.localeCompare(b.end_date):a.customer.localeCompare(b.customer));
  }
  return{configured:true,request,member,signIn,signOut,photoUrl:async path=>displayPhoto(path),displayPhoto,sessionNotice:'',get user(){return user;}};
 })();

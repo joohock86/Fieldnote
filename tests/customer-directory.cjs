@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const context={};vm.createContext(context);
+vm.runInContext(fs.readFileSync('cpanel/public/customers-ui.js','utf8')+';globalThis.directory=customerDirectory;',context);
+const groups=(profiles,reports,contracts)=>JSON.parse(JSON.stringify(context.directory.groups(profiles,reports,contracts)));
+const profile={id:'customer-1',customer:'Renamed Example',aliases:['Old Example'],phone:'',email:'new@example.com',location:'New address'};
+const report={id:'report-1',customer:' old  EXAMPLE ',phone:'Historic phone',photos:['keep.pdf']};
+const contract={id:'contract-1',customer:'Old Example'};
+const result=groups([profile],[report],[contract]);
+assert.equal(result.length,1);assert.equal(result[0].rows.length,1);assert.equal(result[0].contracts.length,1);
+assert.equal(result[0].phone,'');assert.equal(result[0].email,'new@example.com');
+assert.equal(result[0].rows[0].phone,'Historic phone');assert.deepEqual(report.photos,['keep.pdf']);
+assert.equal(groups([profile],[{...report,customer:'Historic name',customer_id:'customer-1'}],[]).length,1);
+assert.equal(groups([{id:'new',customer:'Standalone customer',phone:'123'}],[],[])[0].rows.length,0);
+assert.equal(groups([],[],[{customer:'Contract only',phone:'456'}])[0].phone,'456');
+assert.equal(groups([],[{customer:'Name',phone:'123'},{customer:' name '}],[]).length,1);
+console.log('Customer grouping passed: standalone customers, canonical names, stable IDs, renamed history, cleared profile details, and contract-only customers.');

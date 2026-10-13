@@ -20,6 +20,7 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       page.on('pageerror', e => errors.push(e.message));
       let authenticated = false;
       let recordWrites = 0;
+      let profiles=[], revision=0, customersUnavailable=false;
       await page.route('**/*', async route => {
         const url = new URL(route.request().url());
         if (url.hostname !== 'fieldnote.test') return route.abort();
@@ -27,9 +28,21 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
           const action = url.searchParams.get('action');
           if (['reports','contracts'].includes(action) && route.request().method() === 'POST') recordWrites++;
           if (action === 'me' && !authenticated) return route.fulfill({status:401,json:{error:'Sign in required'}});
+          if (action === 'me') return route.fulfill({json:{email:'long-team-address@example.com',id:'demo-user'}});
           if (action === 'login') { authenticated=true; return route.fulfill({json:{email:'long-team-address@example.com',id:'demo-user'}}); }
           if (action === 'reports') return route.fulfill({json:[report]});
           if (action === 'contracts') return route.fulfill({json:[contract,{...contract,id:'contract-only',customer:'Example Chemical Services'}]});
+          if (action === 'customers') {
+            if(route.request().method()==='POST') {
+              const data=route.request().postDataJSON();
+              if(data.customer===report.customer&&!data.original_name&&!data.id)return route.fulfill({status:409,json:{error:'A customer already uses this name. Open that customer to edit their details.'}});
+              const old=profiles.find(profile=>profile.id===data.id);
+              const saved={...data,id:data.id||'profile-'+(profiles.length+1),revision:String(++revision),aliases:[...new Set([...(old?.aliases||[]),...(data.original_name?[data.original_name]:[]),data.customer])]};
+              profiles=profiles.filter(profile=>profile.id!==saved.id);profiles.push(saved);
+              return route.fulfill({json:saved});
+            }
+            return customersUnavailable?route.fulfill({status:503,json:{error:'Customer service unavailable'}}):route.fulfill({json:profiles});
+          }
           throw new Error('Unexpected API action: '+action);
         }
         const name = url.pathname === '/' ? 'index.html' : path.basename(url.pathname);
@@ -87,7 +100,13 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('.close').click();
       await page.locator('[data-view="customers"]').click();
       await check('customers');
-      await page.locator('[data-customer-index="0"]').click();
+      assert.equal(await page.locator('#new').innerText(),'+ New Customer');
+      await page.locator('#new').click();
+      await page.locator('#customer-form').waitFor();
+      assert.equal(await page.locator('#report-form').count(),0);
+      await check('new-customer-form');
+      await page.locator('.close').click();
+      await page.locator('[data-customer-index]').filter({hasText:report.customer}).click();
       await check('customer-detail');
       await page.locator('.close').click();
       await page.locator('[data-view="maintenance"]').click();
@@ -117,6 +136,59 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('#new').click();
       await page.locator('#report-form').waitFor();
       assert.equal(recordWrites,0,'Selecting a suggestion must not save a report or contract');
+      await page.locator('.close').click();
+      await page.locator('[data-view="customers"]').click();
+      await page.locator('#new').click();
+      await page.locator('#f-customer').fill('Standalone customer');
+      await page.locator('#f-phone').fill('87654321');
+      await page.locator('#f-email').fill('customer@example.com');
+      await page.locator('#f-contact_person').fill('Example contact');
+      await page.locator('#f-location').fill('Example new address');
+      await page.locator('#customer-notes').fill('New customer notes');
+      await page.locator('#save-customer').click();
+      await page.locator('#edit-customer').waitFor();
+      assert.match(await page.locator('#modal-body').innerText(),/No service reports yet/);
+      await page.locator('.close').click();
+      await page.reload();
+      await page.locator('[data-id="demo-report"]').waitFor();
+      await page.locator('[data-view="customers"]').click();
+      await page.locator('[data-customer-index]').filter({hasText:'Standalone customer'}).click();
+      await page.locator('#edit-customer').click();
+      assert.equal(await page.locator('#f-phone').inputValue(),'87654321');
+      assert.equal(await page.locator('#f-contact_person').inputValue(),'Example contact');
+      await page.locator('#f-phone').fill('11223344');
+      await page.locator('#f-email').fill('');
+      await page.locator('#save-customer').click();
+      await page.locator('#edit-customer').waitFor();
+      assert.match(await page.locator('#modal-body').innerText(),/11223344/);
+      await page.locator('.close').click();
+      await page.locator('[data-customer-index]').filter({hasText:report.customer}).click();
+      await page.locator('#edit-customer').click();
+      await check('edit-customer-form');
+      await page.locator('#f-customer').fill('Renamed facilities customer');
+      await page.locator('#save-customer').click();
+      await page.locator('#edit-customer').waitFor();
+      assert.equal(await page.locator('#modal-body [data-open-visit]').count(),1);
+      assert.equal(await page.locator('#modal-body [data-contract]').count(),1);
+      await check('saved-customer-detail');
+      await page.locator('.close').click();
+      await page.locator('[data-view="reports"]').click();
+      await page.locator('#new').click();
+      await page.locator('#f-customer').fill('standalone');
+      assert.deepEqual(await page.getByRole('listbox',{name:'Existing customers'}).getByRole('option').allTextContents(),['Standalone customer']);
+      await page.locator('.close').click();
+      await page.locator('[data-view="customers"]').click();
+      await page.locator('#new').click();
+      await page.locator('#f-customer').fill(report.customer);
+      await page.locator('#save-customer').click();
+      await page.getByRole('alert').filter({hasText:'already uses this name'}).waitFor();
+      assert.equal(await page.locator('#save-customer').isEnabled(),true);
+      await page.locator('.close').click();
+      assert.equal(recordWrites,0,'Customer edits must not rewrite reports or contracts');
+      customersUnavailable=true;
+      await page.locator('#reload').click();
+      await page.getByRole('heading',{name:'Unable to load customer details'}).waitFor();
+      assert.equal(await page.locator('#new').isDisabled(),true);
       assert.deepEqual(errors,[],`Browser errors at ${width}px`);
       await context.close();
       console.log(`Checked login, reports, customers, contracts, visits and forms at ${width}px`);

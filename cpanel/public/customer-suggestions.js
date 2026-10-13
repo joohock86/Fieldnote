@@ -7,10 +7,11 @@ const customerSuggestions = (() => {
     const customers = new Map();
     for (const value of names) {
       const name = String(value ?? '').trim();
-      if (name && !customers.has(key(name))) customers.set(key(name), name);
+      const identity=name.replace(/\s+/g,' ').toLowerCase();
+      if (name && !customers.has(identity)) customers.set(identity, name);
     }
     const words = search.split(' ');
-    return [...customers].filter(([name]) => words.every(word => name.includes(word)))
+    return [...customers.values()].map(name=>[key(name),name]).filter(([name]) => words.every(word => name.includes(word)))
       .sort(([a], [b]) => Number(b.startsWith(search)) - Number(a.startsWith(search)) || a.localeCompare(b))
       .slice(0, 8).map(([, name]) => name);
   }
