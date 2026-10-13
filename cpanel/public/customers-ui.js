@@ -55,6 +55,7 @@ function openCustomerForm(g=null) {
   $('modal-title').textContent=g?'Edit customer':'New customer';
   const c=g||{};
   $('modal-body').innerHTML='<form class="form" id="customer-form"><div class="grid">'+field('customer','Customer name',c.customer,true)+field('contact_person','Contact person',c.contact_person)+field('phone','Customer contact number',c.phone,false,'tel')+field('email','Customer email',c.email,false,'email')+field('location','Customer address / default location',c.location)+'<div class="field full"><label for="customer-notes">Customer notes</label><textarea id="customer-notes" name="notes" rows="3">'+esc(c.notes||'')+'</textarea></div></div><p class="maintenance-tip">Customer details are kept with their service history. Previous reports keep the contact and location recorded for that visit.</p><p class="error" id="customer-error" role="alert"></p><div class="actions"><button type="button" class="secondary" onclick="close()">Cancel</button><button class="primary" id="save-customer">Save customer</button></div></form>';
+  $('customer-form').querySelector('button[type="button"]').onclick=close;
   $('customer-form').onsubmit=async event=>{
     event.preventDefault();$('save-customer').disabled=true;$('customer-error').textContent='';
     const data=Object.fromEntries(new FormData(event.target));

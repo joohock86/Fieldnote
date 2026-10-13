@@ -105,7 +105,8 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('#customer-form').waitFor();
       assert.equal(await page.locator('#report-form').count(),0);
       await check('new-customer-form');
-      await page.locator('.close').click();
+      await page.getByRole('button',{name:'Cancel',exact:true}).click();
+      assert.equal(await page.locator('#modal').isVisible(),false,'Cancel must close the new customer form');
       await page.locator('[data-customer-index]').filter({hasText:report.customer}).click();
       await check('customer-detail');
       await page.locator('.close').click();
@@ -156,6 +157,13 @@ const contract = {id:'demo-contract', name:'Example annual maintenance agreement
       await page.locator('#edit-customer').click();
       assert.equal(await page.locator('#f-phone').inputValue(),'87654321');
       assert.equal(await page.locator('#f-contact_person').inputValue(),'Example contact');
+      await page.locator('#f-phone').fill('Unsaved change');
+      await page.getByRole('button',{name:'Cancel',exact:true}).click();
+      assert.equal(await page.locator('#modal').isVisible(),false,'Cancel must close the edit customer form');
+      assert.equal(profiles.find(profile=>profile.customer==='Standalone customer').phone,'87654321','Cancel must not save changes');
+      await page.locator('[data-customer-index]').filter({hasText:'Standalone customer'}).click();
+      await page.locator('#edit-customer').click();
+      assert.equal(await page.locator('#f-phone').inputValue(),'87654321');
       await page.locator('#f-phone').fill('11223344');
       await page.locator('#f-email').fill('');
       await page.locator('#save-customer').click();
